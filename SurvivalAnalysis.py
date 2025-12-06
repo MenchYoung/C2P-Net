@@ -78,3 +78,4 @@ def c_index(log_risk, times, events):
     
 
     return n_concordant / n_observed
+
