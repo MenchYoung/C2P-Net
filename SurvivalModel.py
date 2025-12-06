@@ -7,8 +7,8 @@ import torch.nn.functional as F
 
 
 try:
-    from m3d_lamed_model_0810.configuration_d3d_lamed import LamedConfig
-    from m3d_lamed_model_0810.vison_tower_component0810 import Swin3DTower
+    from encoder.configuration import LamedConfig
+    from encoder.vison_tower_component import Swin3DTower
 except ImportError:
     class LamedConfig: hidden_size = 1024
     class Swin3DTower(nn.Module):
@@ -182,3 +182,4 @@ class SurvivalModel(nn.Module):
         for stage in encoder_stages[-layers_to_unfreeze:]:
             for param in stage.parameters():
                 param.requires_grad = True
+
