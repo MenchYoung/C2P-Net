@@ -9,7 +9,7 @@ from sklearn.metrics import roc_auc_score
 import torch.nn.functional as F
 
 try:
-    from SurvivalAnalysis_multi import cox_loss, FocalLoss, c_index
+    from SurvivalAnalysis import cox_loss, FocalLoss, c_index
 except ImportError:
     print("Error: Can`t import functions from 'SurvivalAnalysis_multi.py'")
     def cox_loss(*args): raise NotImplementedError("cox_loss not implemented")
@@ -289,3 +289,4 @@ class Trainer:
 
 
         return self.model, pd.DataFrame(history)
+
