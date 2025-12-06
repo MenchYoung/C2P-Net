@@ -1,5 +1,3 @@
-# Trainer_test.py
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -10,17 +8,15 @@ import pandas as pd
 from sklearn.metrics import roc_auc_score
 import torch.nn.functional as F
 
-# --- 导入您自己的模块 (保持不变) ---
 try:
     from SurvivalAnalysis_multi import cox_loss, FocalLoss, c_index
 except ImportError:
-    print("错误: 无法从 'SurvivalAnalysis_multi.py' 导入函数。将使用占位符。")
+    print("Error: Can`t import functions from 'SurvivalAnalysis_multi.py'")
     def cox_loss(*args): raise NotImplementedError("cox_loss not implemented")
     class FocalLoss(nn.Module):
         def forward(self, *args): raise NotImplementedError("FocalLoss not implemented")
     def c_index(*args): raise NotImplementedError("c_index not implemented")
 
-# --- 辅助损失函数 (保持不变) ---
 def pearson_correlation_loss(risk_scores, neg_probabilities):
     x, y = risk_scores.view(-1), neg_probabilities.view(-1)
     if len(x) < 2:
@@ -30,17 +26,6 @@ def pearson_correlation_loss(risk_scores, neg_probabilities):
     return -cost
 
 class Trainer:
-    """
-    <<< 升级版混合策略 Trainer (支持 train/val/test 划分) >>>
-    集成了:
-    - 分阶段课程学习
-    - Pearson 一致性约束
-    - 自动加权损失
-    - 基于验证集的模型选择 (早停、保存最佳)
-    - 每轮监控测试集性能
-    - 训练结束后在测试集上进行最终评估
-    """
-    # __init__ 和 _create_optimizer_and_scheduler 保持不变
     def __init__(self, model, dataloaders,
                  num_epochs: int,
                  time_points: np.ndarray,
@@ -71,13 +56,10 @@ class Trainer:
         self.optimizer = None
         self.scheduler = None
 
-        print("--- [升级版] 混合策略 Trainer 初始化完成 (支持 train/val/test) ---")
-        if 'test' not in self.dataloaders:
-             print("警告: dataloaders 字典中未找到 'test'键，将无法进行测试集评估。")
         if self.consistency_weight > 0:
-            print(f"  - 一致性约束: Pearson 损失权重 {self.consistency_weight} (在阶段二和三生效)。")
+            print(f"  - L_Pearson 损失权重 {self.consistency_weight} (effect on Stage 2 and Stage 3)。")
         else:
-            print("  - 一致性约束: 未启用。")
+            print("  - L_Pearson: Not Work")
 
     def _create_optimizer_and_scheduler(self, lr, num_epochs_for_scheduler):
         trainable_params = [p for p in self.model.parameters() if p.requires_grad]
@@ -87,7 +69,6 @@ class Trainer:
         self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer, T_max=max(1, num_epochs_for_scheduler))
         print(f"Optimizer AdamW created, learning rate: {lr}")
 
-    # _train_epoch 保持不变
     def _train_epoch(self, current_stage: int):
         self.model.train()
         loss_tracker = {
@@ -141,19 +122,12 @@ class Trainer:
         avg_losses['train_c_index'] = c_index(torch.cat(all_risk_scores), torch.cat(all_times), torch.cat(all_events))
         return avg_losses
 
-    # <<< 改动 1: 将 _validate_epoch 泛化为 _evaluate_epoch >>>
     def _evaluate_epoch(self, mode: str):
-        """
-        在给定的数据集(val 或 test)上执行一次完整的评估。
-        """
-        if mode not in ['val', 'test']:
-            raise ValueError("评估模式必须是 'val' 或 'test'")
         
         self.model.eval()
         all_risks, all_times, all_events = [], [], []
         all_multi_logits, all_multi_labels, all_multi_masks = [], [], []
 
-        # 根据模式选择正确的数据加载器
         dataloader = self.dataloaders[mode]
         
         with torch.no_grad():
@@ -190,7 +164,6 @@ class Trainer:
         
         avg_auc = np.mean(auc_scores) if auc_scores else 0.0
 
-        # DataFrame 只在需要时创建 (例如，保存最佳模型时或最终评估时)
         predictions_df = None
         try:
             df_data = {'PFS': times.numpy(), 'event': events.numpy(), 'risk_score': risks.numpy().flatten()}
@@ -200,11 +173,10 @@ class Trainer:
                 df_data[f'mask_{t}m'] = masks[:, i].numpy()
             predictions_df = pd.DataFrame(df_data)
         except Exception as e:
-            print(f"警告: 创建详细预测DataFrame失败: {e}")
+            print(f"Warning: Create DataFrame failed: {e}")
         
         return c_idx, avg_auc, predictions_df
         
-    # <<< 改动 2: 大幅修改 fit 函数以集成测试集评估 >>>
     def fit(self, 
             stage1_epochs: int,
             stage2_lr_ratio: float,
@@ -215,7 +187,6 @@ class Trainer:
             output_dir: str = './output'):
         
         os.makedirs(output_dir, exist_ok=True)
-        # 更新路径字典，使其更清晰
         paths = {
             'best': os.path.join(output_dir, 'best_model.pt'),
             'last': os.path.join(output_dir, 'last_epoch_model.pt'),
@@ -254,21 +225,18 @@ class Trainer:
                 # 使用新的评估函数
                 val_c_index, val_avg_auc, val_preds_df = self._evaluate_epoch(mode='val')
                 
-                # 新增：在每轮都对测试集进行评估以监控
                 test_c_index, test_avg_auc, _ = self._evaluate_epoch(mode='test')
                 
                 if self.scheduler: self.scheduler.step()
                 
                 current_lr = self.optimizer.param_groups[0]['lr'] if self.optimizer else 0
                 w_cox, w_focal = train_metrics.get('weight_cox', -1), train_metrics.get('weight_focal', -1)
-        
-                # 更新打印信息
+    
                 print(f"Epoch {current_epoch_counter} Summary: Train Loss: {train_metrics['total']:.4f}, Train C-Index: {train_metrics['train_c_index']:.4f}")
                 print(f"  - Validation: C-Index: {val_c_index:.4f}, Avg AUC: {val_avg_auc:.4f}")
                 print(f"  - Test Set:   C-Index: {test_c_index:.4f}, Avg AUC: {test_avg_auc:.4f} (Monitoring only)")
                 print(f"  - LR: {current_lr:.8f}, Auto-Weights -> Cox: {w_cox:.4f}, Focal: {w_focal:.4f}")
                 
-                # 更新日志条目
                 log_entry = train_metrics.copy()
                 log_entry.update({
                     'epoch': current_epoch_counter, 'learning_rate': current_lr, 'stage': stage['stage_code'],
@@ -278,7 +246,6 @@ class Trainer:
                 history.append(log_entry)
                 pd.DataFrame(history).to_csv(paths['log'], index=False)
                 
-                # 决策逻辑严格基于验证集，保持不变！
                 if val_avg_auc > best_val_avg_auc:
                     print(f"  -- Val AUC Improved ({best_val_avg_auc:.4f} --> {val_avg_auc:.4f}). Saving best model and val predictions... --")
                     best_val_avg_auc = val_avg_auc
@@ -301,14 +268,10 @@ class Trainer:
         last_model_state = self.model.module.state_dict() if isinstance(self.model, nn.DataParallel) else self.model.state_dict()
         torch.save(last_model_state, paths['last'])
         
-        # <<< 改动 3: 新增训练结束后的最终测试集评估 >>>
         print("\n--- Performing Final Evaluation on Test Set with Best Model ---")
         if os.path.exists(paths['best']):
-            # 加载最佳模型权重到当前模型
             best_state_dict = torch.load(paths['best'], map_location=self.device)
             self.model.load_state_dict(best_state_dict)
-            
-            # 使用最佳模型在测试集上进行最后一次评估
             final_test_c, final_test_auc, final_test_preds_df = self._evaluate_epoch(mode='test')
             
             print("\n" + "="*50)
@@ -318,11 +281,11 @@ class Trainer:
             print(f"  - Final Test Avg AUC: {final_test_auc:.4f}")
             print("="*50)
 
-            # 保存最终的测试集预测结果
             if final_test_preds_df is not None:
                 final_test_preds_df.to_csv(paths['test_preds'], index=False)
                 print(f"Final test predictions saved to {paths['test_preds']}")
         else:
             print("Warning: Best model file not found. Skipping final evaluation.")
+
 
         return self.model, pd.DataFrame(history)
