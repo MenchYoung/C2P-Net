@@ -8,15 +8,23 @@ Accurate prediction of Progression-Free Survival (PFS) from longitudinal Compute
 
 🛠️ Installation
 
-git clone https://github.com/YourUsername/C2P-Net.git
+## 🛠️ Installation
+
+```bash
+git clone https://github.com/MenchYoung/C2P-Net.git
 cd C2P-Net
 pip install -r requirements.txt
+```
 
 🏃‍♂️Training
-python main.py 
+```bash
+python main.py
+```
 
 🏃‍♂️test
-python test.py 
+```bash
+python test.py
+```
 
 📝 Citation
 If you find this work useful, please cite our paper:
