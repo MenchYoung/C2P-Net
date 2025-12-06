@@ -19,15 +19,15 @@ cd C2P-Net
 pip install -r requirements.txt
 ```
 
-##🏃‍♂️Training
+## 🏃‍♂️Training
 ```bash
 python main.py
 ```
 
-##🏃‍♂️test
+## 🏃‍♂️test
 ```bash
 python test.py
 ```
 
-##📝 Citation
-If you find this work useful, please cite our paper:
+## 📝 Citation
+If you find this work useful, please cite our paper: comming soon...
