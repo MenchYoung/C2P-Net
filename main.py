@@ -7,12 +7,12 @@ import json
 import pandas as pd
 from collections import OrderedDict
 
-from SurvivalModel_reverse_v3 import SurvivalModel 
-from Trainer_test import Trainer        
-from Dataset_test import get_dataloaders 
+from SurvivalModel import SurvivalModel 
+from Trainer import Trainer        
+from Dataset import get_dataloaders 
 
 try:
-    from m3d_lamed_model_0810.configuration_d3d_lamed import LamedConfig
+    from encoder.configuration import LamedConfig
 except ImportError as e:
     print(f"警告: 无法导入 LamedConfig: {e}。将使用占位符。")
     class LamedConfig: image_size, hidden_size = (48, 256, 256), 768
@@ -146,3 +146,4 @@ if __name__ == '__main__':
         
 
     main()
+
