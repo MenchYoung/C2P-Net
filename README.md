@@ -8,7 +8,7 @@ Accurate prediction of Progression-Free Survival (PFS) from longitudinal compute
 On a longitudinal CT cohort of 864 lung cancer patients, C2P-Net predicts progression status at multiple clinically relevant time points and achieves a C-index of 0.676; moreover, replacing standard cross-attention with the proposed CCA yields an additional 1.3\% AUC gain at the 6-month prediction task. Furthermore, the proposed model enables effective risk stratification, resulting in high- and low-risk groups with a statistically significant difference in PFS (P < 0.001).
 
 
-![Network Architecture](fig.png)
+![Network Architecture](structure.png)
 
 
 
