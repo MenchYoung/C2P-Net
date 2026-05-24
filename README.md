@@ -1,6 +1,6 @@
 # C2P-Net
 This repository contains the official implementation of the paper:
-“Contrastive Cross-Attention for Clinically-Consistent Survival Prediction from Longitudinal CT Scans” (Submitted to EMBC 2026)
+“Contrastive Cross-Attention for Clinically-Consistent Survival Prediction from Longitudinal CT Scans” (Accepted by EMBC 2026)
 
 ## 🚀Introduction
 
